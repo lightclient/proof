@@ -12,11 +12,11 @@ proc-macro = true
 [dependencies]
 syn = { version = "0.15", features = ["extra-traits"] }
 quote = "0.6"
-merkle_partial = { path = "../merkle_partial" }
 proc-macro2 = "0.4.30"
+merkle_partial = { path = "../" }
 
 [dev-dependencies]
 ethereum-types = "0.6.0"
 typenum = "1.10"
-ssz_types = { path = "../ssz_types" }
+ssz_types = { git = "https://github.com/sigp/lighthouse", branch="master" }
 hex = "0.3.2"
