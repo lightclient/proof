@@ -1,14 +1,14 @@
 #![allow(unused)]
 
 use ethereum_types::U256;
-use merkle_partial::cache::hash_children;
-use merkle_partial::field::{Composite, Node, Primitive};
-use merkle_partial::{Error, MerkleTreeOverlay, Partial, Path, SerializedPartial};
-use merkle_partial_derive;
+use proof::cache::hash_children;
+use proof::field::{Composite, Node, Primitive};
+use proof::{Error, MerkleTreeOverlay, Proof, Path, SerializedProof};
+use proof_derive::Provable;
 use ssz_types::{FixedVector, VariableList};
 use typenum::{U32, U8};
 
-#[derive(Debug, Default, merkle_partial_derive::Partial)]
+#[derive(Debug, Default, Provable)]
 pub struct A {
     a: U256,
     b: U256,
@@ -58,7 +58,7 @@ fn basic_overlay() {
 }
 
 #[test]
-fn basic_partial() {
+fn basic_proof() {
     let one = U256::from(1);
     let two = U256::from(2);
 
@@ -69,12 +69,12 @@ fn basic_partial() {
     arr[64] = 3;
     arr[80] = 4;
 
-    let partial = SerializedPartial {
+    let proof = SerializedProof {
         indices: vec![3, 4, 5, 6],
         chunks: arr.to_vec(),
     };
 
-    let mut p = Partial::<A>::new(partial.clone());
+    let mut p = Proof::<A>::new(proof.clone());
 
     assert_eq!(
         p.get_bytes(vec![Path::Ident("a".to_string())]),
@@ -102,7 +102,7 @@ fn basic_partial() {
     );
 }
 
-#[derive(merkle_partial_derive::Partial)]
+#[derive(Provable)]
 struct B {
     a: u64,
     b: FixedVector<u128, U8>,
@@ -145,7 +145,7 @@ fn simple_fixed_vector() {
     }
 }
 
-#[derive(merkle_partial_derive::Partial)]
+#[derive(Provable)]
 struct C {
     a: u8,
     b: u16,
@@ -179,13 +179,13 @@ fn single_node() {
     );
 }
 
-#[derive(Debug, Default, merkle_partial_derive::Partial)]
+#[derive(Debug, Default, Provable)]
 struct Message {
     timestamp: u64,
     message: FixedVector<u8, U32>,
 }
 
-#[derive(Debug, Default, merkle_partial_derive::Partial)]
+#[derive(Debug, Default, Provable)]
 struct State {
     messages: VariableList<Message, U8>,
 }
@@ -227,17 +227,17 @@ fn roundtrip_partial() {
     // 2 length mixin
     arr[223] = 2;
 
-    let sp = SerializedPartial {
+    let sp = SerializedProof {
         indices: vec![31, 32, 33, 34, 8, 4, 2],
         chunks: arr.clone(),
     };
 
-    let mut partial = Partial::<State>::new(sp);
-    assert_eq!(partial.fill(), Ok(()));
+    let mut proof = Proof::<State>::new(sp);
+    assert_eq!(proof.fill(), Ok(()));
 
     // TESTING TIMESTAMPS
     assert_eq!(
-        partial.get_bytes(vec![
+        proof.get_bytes(vec![
             Path::Ident("messages".to_string()),
             Path::Index(0),
             Path::Ident("timestamp".to_string())
@@ -246,7 +246,7 @@ fn roundtrip_partial() {
     );
 
     assert_eq!(
-        partial.get_bytes(vec![
+        proof.get_bytes(vec![
             Path::Ident("messages".to_string()),
             Path::Index(1),
             Path::Ident("timestamp".to_string())
@@ -256,7 +256,7 @@ fn roundtrip_partial() {
 
     // TESTING MESSAGES
     assert_eq!(
-        partial.get_bytes(vec![
+        proof.get_bytes(vec![
             Path::Ident("messages".to_string()),
             Path::Index(0),
             Path::Ident("message".to_string()),
@@ -266,7 +266,7 @@ fn roundtrip_partial() {
     );
 
     assert_eq!(
-        partial.get_bytes(vec![
+        proof.get_bytes(vec![
             Path::Ident("messages".to_string()),
             Path::Index(1),
             Path::Ident("message".to_string()),

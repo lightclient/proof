@@ -1,19 +1,22 @@
 [package]
-name = "merkle_partial_derive"
+name = "proof_derive"
 version = "0.0.0"
 authors = ["Matt Garnett <matt.garnett@consensys.net>", "Paul Hauner <paul@sigmaprime.io>"]
+license = "Apache-2.0"
+description = "Derive macro for `proof` crate."
+repository = "https://github.com/c-o-l-o-r/proof"
+keywords = ["merkle tree proof", "merkle partial", "ssz"]
 edition = "2018"
-description = "Procedural derive macros to accompany the merkle_partial crate."
 
 [lib]
-name = "merkle_partial_derive"
+name = "proof_derive"
 proc-macro = true
 
 [dependencies]
-syn = { version = "0.15", features = ["extra-traits"] }
+syn = "0.15"
 quote = "0.6"
 proc-macro2 = "0.4.30"
-merkle_partial = { path = "../" }
+proof = { path = "../" }
 
 [dev-dependencies]
 ethereum-types = "0.6.0"

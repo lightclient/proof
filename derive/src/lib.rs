@@ -2,13 +2,13 @@
 
 extern crate proc_macro;
 
-use merkle_partial::tree_arithmetic::{log_base_two, next_power_of_two};
+use proof::tree_arithmetic::{log_base_two, next_power_of_two};
 use proc_macro::TokenStream;
 use proc_macro2;
 use quote::quote;
 use syn::{parse_macro_input, DeriveInput};
 
-#[derive(Clone, Debug)]
+#[derive(Clone)]
 struct LeafData<'a> {
     ident: &'a syn::Ident,
     ty: &'a syn::Type,
@@ -18,7 +18,7 @@ struct LeafData<'a> {
 }
 
 /// Returns a Vec of `syn::Ident` for each named field in the struct, whilst filtering out fields
-/// that should not be accounted for in the merkle partial.
+/// that should not be accounted for in the merkle proof.
 ///
 /// # Panics
 /// Any unnamed struct field (like in a tuple struct) will raise a panic at compile time.
@@ -32,7 +32,7 @@ fn get_named_field_idents<'a>(struct_data: &'a syn::DataStruct) -> Vec<&'a syn::
             } else {
                 Some(match &f.ident {
                     Some(ref ident) => ident,
-                    _ => panic!("merkle_partial only supports named struct fields."),
+                    _ => panic!("proof only supports named struct fields."),
                 })
             }
         })
@@ -40,7 +40,7 @@ fn get_named_field_idents<'a>(struct_data: &'a syn::DataStruct) -> Vec<&'a syn::
 }
 
 /// Returns a Vec of `syn::Type` for each named field in the struct, whilst filtering out fields
-/// that should not be accounted for in the merkle partial.
+/// that should not be accounted for in the merkle proof.
 fn get_field_types<'a>(struct_data: &'a syn::DataStruct) -> Vec<&'a syn::Type> {
     struct_data
         .fields
@@ -50,7 +50,7 @@ fn get_field_types<'a>(struct_data: &'a syn::DataStruct) -> Vec<&'a syn::Type> {
 }
 
 /// Returns true if some field has an attribute declaring it should not be included in the merkle
-/// partial.
+/// proof.
 ///
 /// The field attribute is: `#[ssz(skip)]`
 fn should_skip(field: &syn::Field) -> bool {
@@ -134,7 +134,7 @@ fn generate_node(index: u64, leaf_data: &Vec<LeafData>) -> proc_macro2::TokenStr
                 let ident = ident.to_string();
 
                 quote! {
-                    merkle_partial::field::Primitive {
+                    proof::field::Primitive {
                         index: #index,
                         ident: #ident.to_owned(),
                         size: #size,
@@ -145,7 +145,7 @@ fn generate_node(index: u64, leaf_data: &Vec<LeafData>) -> proc_macro2::TokenStr
             .collect();
 
         quote! {
-            merkle_partial::field::Node::Primitive(vec![
+            proof::field::Node::Primitive(vec![
                 #(#primitive_nodes),*
             ])
         }
@@ -153,8 +153,8 @@ fn generate_node(index: u64, leaf_data: &Vec<LeafData>) -> proc_macro2::TokenStr
         let LeafData { ident, ty, .. } = leaf_data[0];
         let ident = ident.to_string();
         quote! {
-            merkle_partial::field::Node::Composite(
-                merkle_partial::field::Composite {
+            proof::field::Node::Composite(
+                proof::field::Composite {
                     index: #index,
                     ident: #ident.to_owned(),
                     height: <#ty>::height(),
@@ -190,14 +190,14 @@ fn build_if_chain<'a>(
                 // request the node from the field's type for `path[1..]`. This matcher will never
                 // need to match a `Path::Index(_)` type.
                 quote! {
-                    if Some(&merkle_partial::Path::Ident(#ident.to_string())) == path.first() {
+                    if Some(&proof::Path::Ident(#ident.to_string())) == path.first() {
                         if path.len() == 1 {
                             return Ok(#ret_node);
                         } else {
                             let node = <#ty>::get_node(path[1..].to_vec())?;
-                            let index = merkle_partial::tree_arithmetic::zeroed::subtree_index_to_general(#leaf_index, node.get_index());
+                            let index = proof::tree_arithmetic::zeroed::subtree_index_to_general(#leaf_index, node.get_index());
 
-                            return Ok(merkle_partial::impls::replace_index(node.clone(), index));
+                            return Ok(proof::impls::replace_index(node.clone(), index));
                         }
                     }
                 }
@@ -209,8 +209,8 @@ fn build_if_chain<'a>(
 /// Implements `merkle_partial::merkle_tree_overlay::MerkleTreeOverlay` for some `struct`.
 ///
 /// Fields are stored in the merkle tree in the order they appear in the struct.
-#[proc_macro_derive(Partial)]
-pub fn merkle_partial_derive(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(Provable)]
+pub fn proof_derive(input: TokenStream) -> TokenStream {
     let item = parse_macro_input!(input as DeriveInput);
 
     let name = &item.ident;
@@ -218,7 +218,7 @@ pub fn merkle_partial_derive(input: TokenStream) -> TokenStream {
 
     let struct_data = match &item.data {
         syn::Data::Struct(s) => s,
-        _ => panic!("merkle_partial_derive only supports structs."),
+        _ => panic!("proof_derive only supports structs."),
     };
 
     // Parse the struct into a vector of data elements which contain the necessary information to
@@ -235,25 +235,25 @@ pub fn merkle_partial_derive(input: TokenStream) -> TokenStream {
     let if_chain = build_if_chain(&leaf_data, height);
 
     let output = quote! {
-        impl #impl_generics merkle_partial::MerkleTreeOverlay for #name #ty_generics #where_clause {
+        impl #impl_generics proof::MerkleTreeOverlay for #name #ty_generics #where_clause {
             fn height() -> u8 {
                 #height as u8
             }
 
-            fn first_leaf() -> merkle_partial::NodeIndex {
+            fn first_leaf() -> proof::NodeIndex {
                 (1_u64 << Self::height()) - 1
             }
 
-            fn last_leaf() -> merkle_partial::NodeIndex {
+            fn last_leaf() -> proof::NodeIndex {
                 (1_u64 << Self::height() + 1) - 2
             }
 
-            fn get_node(path: Vec<merkle_partial::Path>) -> Result<merkle_partial::field::Node, merkle_partial::Error> {
+            fn get_node(path: Vec<proof::Path>) -> Result<proof::field::Node, proof::Error> {
                 #(#if_chain else)*
                 if let Some(p) = path.first() {
-                    Err(merkle_partial::Error::InvalidPath(p.clone()))
+                    Err(proof::Error::InvalidPath(p.clone()))
                 } else {
-                    Err(merkle_partial::Error::EmptyPath())
+                    Err(proof::Error::EmptyPath())
                 }
             }
         }

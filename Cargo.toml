@@ -1,14 +1,17 @@
 [package]
-name = "merkle_partial"
+name = "proof"
 version = "0.0.0"
 authors = ["Matt Garnett <matt.garnett@consensys.net>"]
+license = "Apache-2.0"
+description = "Library for interacting with SSZ merkle tree proofs."
+repository = "https://github.com/c-o-l-o-r/proof"
+keywords = ["merkle tree proof", "merkle partial", "ssz"]
 edition = "2018"
 
 [dependencies]
 ethereum-types = "0.6.0"
 typenum = "1.10.0"
-hashing = { git = "https://github.com/sigp/lighthouse", branch="master" }
-tree_hash = { git = "https://github.com/sigp/lighthouse", branch="master" }
+sha2 = "0.8.0"
 ssz_types = { git = "https://github.com/sigp/lighthouse", branch="master" }
-eth2_ssz = { git = "https://github.com/sigp/lighthouse", branch="master" }
-eth2_ssz_derive = { git = "https://github.com/sigp/lighthouse", branch="master" }
+eth2_ssz = "0.1.2"
+eth2_ssz_derive = "0.1.0"

@@ -1,9 +1,9 @@
 use ethereum_types::U256;
-use merkle_partial::cache::hash_children;
-use merkle_partial::field::{Composite, Node, Primitive};
-use merkle_partial::impls::replace_index;
-use merkle_partial::tree_arithmetic::zeroed::subtree_index_to_general;
-use merkle_partial::{Error, MerkleTreeOverlay, NodeIndex, Partial, Path, SerializedPartial};
+use proof::cache::hash_children;
+use proof::field::{Composite, Node, Primitive};
+use proof::impls::replace_index;
+use proof::tree_arithmetic::zeroed::subtree_index_to_general;
+use proof::{Error, MerkleTreeOverlay, NodeIndex, Proof, Path, SerializedProof};
 use ssz_types::VariableList;
 use typenum::U8;
 
@@ -72,9 +72,9 @@ impl MerkleTreeOverlay for S {
                 }
             }
         } else if let Some(p) = path.first() {
-            Err(merkle_partial::Error::InvalidPath(p.clone()))
+            Err(Error::InvalidPath(p.clone()))
         } else {
-            Err(merkle_partial::Error::EmptyPath())
+            Err(Error::EmptyPath())
         }
     }
 }
@@ -92,17 +92,17 @@ fn roundtrip_partial() {
 
     arr[64..96].copy_from_slice(twelve);
 
-    let sp = SerializedPartial {
+    let sp = SerializedProof {
         indices: vec![23, 24, 12, 6, 1],
         chunks: arr.to_vec(),
     };
 
-    let mut p = Partial::<S>::default();
+    let mut p = Proof::<S>::default();
 
-    assert_eq!(p.load_partial(sp.clone()), Ok(()));
+    assert_eq!(p.load(sp.clone()), Ok(()));
     assert_eq!(p.fill(), Ok(()));
     assert_eq!(
-        p.extract_partial(vec![Path::Ident("b".to_string()), Path::Index(2)]),
+        p.extract(vec![Path::Ident("b".to_string()), Path::Index(2)]),
         Ok(sp)
     );
 
@@ -130,12 +130,12 @@ fn get_and_set_by_path() {
     arr[143] = 6;
     arr[159] = 7;
 
-    let sp = SerializedPartial {
+    let sp = SerializedProof {
         indices: vec![1, 23, 24, 25, 26],
         chunks: arr.to_vec(),
     };
 
-    let mut p = Partial::<S>::new(sp.clone());
+    let mut p = Proof::<S>::new(sp.clone());
 
     // Check S.a
     assert_eq!(

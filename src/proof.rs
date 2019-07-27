@@ -1,4 +1,4 @@
-use super::{NodeIndex, SerializedPartial};
+use super::{NodeIndex, SerializedProof, BYTES_PER_CHUNK};
 use crate::cache::Cache;
 use crate::error::{Error, Result};
 use crate::field::Node;
@@ -7,42 +7,41 @@ use crate::path::Path;
 use crate::tree_arithmetic::zeroed::sibling_index;
 
 use std::marker::PhantomData;
-use tree_hash::BYTES_PER_CHUNK;
 
-/// A `Partial` is generated from a `SerializedPartial` and can manipulate / verify data in the
+/// A `Proof` is generated from a `SerializedProof` and can manipulate / verify data in the
 /// merkle tree.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct Partial<T: MerkleTreeOverlay> {
+pub struct Proof<T: MerkleTreeOverlay> {
     cache: Cache,
     _phantom: PhantomData<T>,
 }
 
-impl<T: MerkleTreeOverlay> Partial<T> {
-    /// Initialize `Partial` directly from a `SerializedPartial`.
-    pub fn new(partial: SerializedPartial) -> Self {
+impl<T: MerkleTreeOverlay> Proof<T> {
+    /// Initialize `Proof` directly from a `SerializedProof`.
+    pub fn new(proof: SerializedProof) -> Self {
         let mut ret = Self {
             cache: Cache::new(),
             _phantom: PhantomData,
         };
 
         // This will always return `Ok(())` since the `cache` is starting empty.
-        ret.load_partial(partial).unwrap();
+        ret.load(proof).unwrap();
 
         ret
     }
 
-    /// Populate the struct's cache with a `SerializedPartial`.
-    pub fn load_partial(&mut self, partial: SerializedPartial) -> Result<()> {
-        for (i, index) in partial.indices.iter().enumerate() {
-            let chunk = partial.chunks[i * BYTES_PER_CHUNK..(i + 1) * BYTES_PER_CHUNK].to_vec();
+    /// Populate the struct's cache with a `SerializedProof`.
+    pub fn load(&mut self, proof: SerializedProof) -> Result<()> {
+        for (i, index) in proof.indices.iter().enumerate() {
+            let chunk = proof.chunks[i * BYTES_PER_CHUNK..(i + 1) * BYTES_PER_CHUNK].to_vec();
             self.cache.insert(*index, chunk.clone());
         }
 
         Ok(())
     }
 
-    /// Generates a `SerializedPartial` proving that `path` is a part of the current merkle tree.
-    pub fn extract_partial(&self, path: Vec<Path>) -> Result<SerializedPartial> {
+    /// Generates a `SerializedProof` proving that `path` is a part of the current merkle tree.
+    pub fn extract(&self, path: Vec<Path>) -> Result<SerializedProof> {
         if path.len() == 0 {
             return Err(Error::EmptyPath());
         }
@@ -75,7 +74,7 @@ impl<T: MerkleTreeOverlay> Partial<T> {
             visitor = (visitor + 1) / 2 - 1;
         }
 
-        Ok(SerializedPartial { indices, chunks })
+        Ok(SerializedProof { indices, chunks })
     }
 
     /// Returns the bytes representation of the object associated with `path`
@@ -128,7 +127,7 @@ impl<T: MerkleTreeOverlay> Partial<T> {
         self.cache.fill()
     }
 
-    /// Returns the root node of the partial if it has been calculated.
+    /// Returns the root node of the proof if it has been calculated.
     pub fn root(&self) -> Option<&Vec<u8>> {
         self.cache.get(0)
     }

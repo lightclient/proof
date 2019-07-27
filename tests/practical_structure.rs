@@ -1,8 +1,8 @@
-use merkle_partial::cache::hash_children;
-use merkle_partial::field::{Composite, Node, Primitive};
-use merkle_partial::impls::replace_index;
-use merkle_partial::tree_arithmetic::zeroed::subtree_index_to_general;
-use merkle_partial::{Error, MerkleTreeOverlay, NodeIndex, Partial, Path, SerializedPartial};
+use proof::cache::hash_children;
+use proof::field::{Composite, Node, Primitive};
+use proof::impls::replace_index;
+use proof::tree_arithmetic::zeroed::subtree_index_to_general;
+use proof::{Error, MerkleTreeOverlay, NodeIndex, Proof, Path, SerializedProof};
 use ssz_types::{FixedVector, VariableList};
 use typenum::{U32, U8};
 
@@ -47,9 +47,9 @@ impl MerkleTreeOverlay for Message {
                 e => e,
             }
         } else if let Some(p) = path.first() {
-            Err(merkle_partial::Error::InvalidPath(p.clone()))
+            Err(Error::InvalidPath(p.clone()))
         } else {
-            Err(merkle_partial::Error::EmptyPath())
+            Err(Error::EmptyPath())
         }
     }
 }
@@ -79,9 +79,9 @@ impl MerkleTreeOverlay for State {
                 VariableList::<Message, U8>::get_node(path[1..].to_vec())
             }
         } else if let Some(p) = path.first() {
-            Err(merkle_partial::Error::InvalidPath(p.clone()))
+            Err(Error::InvalidPath(p.clone()))
         } else {
-            Err(merkle_partial::Error::EmptyPath())
+            Err(Error::EmptyPath())
         }
     }
 }
@@ -122,17 +122,17 @@ fn roundtrip_partial() {
     // 2 length mixin
     arr[223] = 2;
 
-    let sp = SerializedPartial {
+    let sp = SerializedProof {
         indices: vec![31, 32, 33, 34, 8, 4, 2],
         chunks: arr.clone(),
     };
 
-    let mut partial = Partial::<State>::new(sp);
-    assert_eq!(partial.fill(), Ok(()));
+    let mut proof = Proof::<State>::new(sp);
+    assert_eq!(proof.fill(), Ok(()));
 
     // TESTING TIMESTAMPS
     assert_eq!(
-        partial.get_bytes(vec![
+        proof.get_bytes(vec![
             Path::Ident("messages".to_string()),
             Path::Index(0),
             Path::Ident("timestamp".to_string())
@@ -141,7 +141,7 @@ fn roundtrip_partial() {
     );
 
     assert_eq!(
-        partial.get_bytes(vec![
+        proof.get_bytes(vec![
             Path::Ident("messages".to_string()),
             Path::Index(1),
             Path::Ident("timestamp".to_string())
@@ -151,7 +151,7 @@ fn roundtrip_partial() {
 
     // TESTING MESSAGES
     assert_eq!(
-        partial.get_bytes(vec![
+        proof.get_bytes(vec![
             Path::Ident("messages".to_string()),
             Path::Index(0),
             Path::Ident("message".to_string()),
@@ -161,7 +161,7 @@ fn roundtrip_partial() {
     );
 
     assert_eq!(
-        partial.get_bytes(vec![
+        proof.get_bytes(vec![
             Path::Ident("messages".to_string()),
             Path::Index(1),
             Path::Ident("message".to_string()),

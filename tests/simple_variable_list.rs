@@ -1,6 +1,5 @@
-use hashing::hash;
-use merkle_partial::field::{Composite, Node};
-use merkle_partial::{Error, MerkleTreeOverlay, NodeIndex, Partial, Path, SerializedPartial};
+use proof::field::{Composite, Node};
+use proof::{Error, MerkleTreeOverlay, NodeIndex, Proof, Path, SerializedProof, hash_children};
 use ssz_types::VariableList;
 use typenum::U4;
 
@@ -41,9 +40,9 @@ impl MerkleTreeOverlay for S {
                 VariableList::<u128, U4>::get_node(path[1..].to_vec())
             }
         } else if let Some(p) = path.first() {
-            Err(merkle_partial::Error::InvalidPath(p.clone()))
+            Err(Error::InvalidPath(p.clone()))
         } else {
-            Err(merkle_partial::Error::EmptyPath())
+            Err(Error::EmptyPath())
         }
     }
 }
@@ -55,18 +54,18 @@ fn roundtrip_partial() {
     chunk[31] = 2;
     chunk[47] = 3;
     chunk[63] = 4;
-    chunk[64..96].copy_from_slice(&hash(&[0; 64]));
+    chunk[64..96].copy_from_slice(&hash_children(&[0; 32], &[0; 32]));
 
-    let partial = SerializedPartial {
+    let proof = SerializedProof {
         indices: vec![3, 4, 2],
         chunks: chunk.to_vec(),
     };
 
-    let mut p = Partial::<S>::new(partial.clone());
+    let mut p = Proof::<S>::new(proof.clone());
     assert_eq!(p.fill(), Ok(()));
 
     assert_eq!(
-        Ok(partial),
-        p.extract_partial(vec![Path::Ident("a".to_string()), Path::Index(0)])
+        Ok(proof),
+        p.extract(vec![Path::Ident("a".to_string()), Path::Index(0)])
     );
 }

@@ -1,7 +1,7 @@
 use super::NodeIndex;
 use crate::error::{Error, Result};
 use crate::tree_arithmetic::zeroed::expand_tree_index;
-use hashing::hash;
+use sha2::{Digest, Sha256};
 use std::collections::HashMap;
 
 /// Stores the mapping of nodes to their chunks.
@@ -115,7 +115,7 @@ impl Cache {
 /// Helper function that appends `right` to `left` and hashes the result.
 pub fn hash_children(left: &[u8], right: &[u8]) -> Vec<u8> {
     let children: Vec<u8> = left.iter().cloned().chain(right.iter().cloned()).collect();
-    hash(&children)
+    Sha256::digest(&children).as_ref().into()
 }
 
 impl std::ops::Index<usize> for Cache {
@@ -129,7 +129,7 @@ impl std::ops::Index<usize> for Cache {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use tree_hash::BYTES_PER_CHUNK;
+    use crate::BYTES_PER_CHUNK;
 
     #[test]
     fn can_fill() {

@@ -1,14 +1,14 @@
 use super::{NodeIndex, BYTES_PER_CHUNK};
 use ssz_derive::{Decode, Encode};
 
-/// A serializable represenation of a `Partial`.
+/// A serializable represenation of a `Proof`.
 #[derive(Clone, Debug, Decode, Encode, Default)]
-pub struct SerializedPartial {
+pub struct SerializedProof {
     pub indices: Vec<NodeIndex>,
     pub chunks: Vec<u8>, // vec<bytes32>
 }
 
-impl PartialEq for SerializedPartial {
+impl PartialEq for SerializedProof {
     fn eq(&self, other: &Self) -> bool {
         if self.indices.len() != other.indices.len() || self.chunks.len() != other.chunks.len() {
             return false;

@@ -1,7 +1,7 @@
 use ethereum_types::U256;
-use merkle_partial::cache::hash_children;
-use merkle_partial::field::{Node, Primitive};
-use merkle_partial::{Error, MerkleTreeOverlay, NodeIndex, Partial, Path, SerializedPartial};
+use proof::cache::hash_children;
+use proof::field::{Node, Primitive};
+use proof::{Error, MerkleTreeOverlay, NodeIndex, Proof, Path, SerializedProof};
 
 // A's merkle tree
 //
@@ -100,9 +100,9 @@ impl MerkleTreeOverlay for S {
                 U256::get_node(path[1..].to_vec())
             }
         } else if let Some(p) = p1 {
-            Err(merkle_partial::Error::InvalidPath(p.clone()))
+            Err(Error::InvalidPath(p.clone()))
         } else {
-            Err(merkle_partial::Error::EmptyPath())
+            Err(Error::EmptyPath())
         }
     }
 }
@@ -119,15 +119,15 @@ fn roundtrip_partial() {
     let two: &[u8] = &hash_children(&arr[64..96], &arr[64..96]);
     arr[64..96].copy_from_slice(two);
 
-    let sp = SerializedPartial {
+    let sp = SerializedProof {
         indices: vec![4, 3, 2],
         chunks: arr.to_vec(),
     };
 
-    let mut p = Partial::<S>::new(sp.clone());
+    let mut p = Proof::<S>::new(sp.clone());
     assert_eq!(p.fill(), Ok(()));
     assert_eq!(
         Ok(sp),
-        p.extract_partial(vec![Path::Ident("a".to_string())])
+        p.extract(vec![Path::Ident("a".to_string())])
     );
 }

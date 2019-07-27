@@ -1,7 +1,7 @@
 use super::NodeIndex;
 use crate::path::Path;
 
-/// An enum of errors that can occur when interacting with partial.
+/// An enum of errors that can occur when interacting with proof.
 #[derive(Debug, PartialEq)]
 pub enum Error {
     // Invalid path element

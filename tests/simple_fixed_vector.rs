@@ -1,7 +1,6 @@
 use ethereum_types::U256;
-use hashing::hash;
-use merkle_partial::field::{Composite, Node};
-use merkle_partial::{Error, MerkleTreeOverlay, NodeIndex, Partial, Path, SerializedPartial};
+use proof::field::{Composite, Node};
+use proof::{Error, MerkleTreeOverlay, NodeIndex, Proof, Path, SerializedProof, hash_children};
 use ssz_types::FixedVector;
 use typenum::U4;
 
@@ -43,9 +42,9 @@ impl MerkleTreeOverlay for S {
                 FixedVector::<U256, U4>::get_node(path[1..].to_vec())
             }
         } else if let Some(p) = path.first() {
-            Err(merkle_partial::Error::InvalidPath(p.clone()))
+            Err(Error::InvalidPath(p.clone()))
         } else {
-            Err(merkle_partial::Error::EmptyPath())
+            Err(Error::EmptyPath())
         }
     }
 }
@@ -54,17 +53,17 @@ impl MerkleTreeOverlay for S {
 fn get_partial_vector() {
     let mut chunk = [0_u8; 96];
     chunk[31] = 1;
-    chunk[64..96].copy_from_slice(&hash(&[0; 64]));
+    chunk[64..96].copy_from_slice(&hash_children(&[0; 32], &[0; 32]));
 
-    let partial = SerializedPartial {
+    let proof = SerializedProof {
         indices: vec![5, 6, 1],
         chunks: chunk.to_vec(),
     };
 
-    let mut p = Partial::<S>::new(partial.clone());
+    let mut p = Proof::<S>::new(proof.clone());
     assert_eq!(p.fill(), Ok(()));
     assert_eq!(
-        Ok(partial),
-        p.extract_partial(vec![Path::Ident("a".to_string()), Path::Index(2)])
+        Ok(proof),
+        p.extract(vec![Path::Ident("a".to_string()), Path::Index(2)])
     );
 }
