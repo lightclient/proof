@@ -195,3 +195,25 @@ fn get_and_set_by_path() {
         Err(Error::InvalidPath(generate_path()[0].clone()))
     );
 }
+
+#[test]
+fn readme_test() {
+    let one = vec![0u8; 32];
+    let six = vec![0u8; 32];
+    let twelve = hash_children(&[0u8; 32], &[0u8; 32]);
+    let twenty_three = vec![1u8; 32];
+    let twenty_four = vec![2u8; 32];
+
+    let serialized_proof = SerializedProof {
+        indices: vec![1, 6, 12, 23, 24],
+        chunks: vec![one, six, twelve, twenty_three, twenty_four].into_iter().flatten().collect(),
+    };
+
+    let mut proof = Proof::<S>::new(serialized_proof.clone());
+
+    assert_eq!(proof.fill(), Ok(()));
+    assert_eq!(
+        proof.extract(vec![Path::Ident("b".to_string()), Path::Index(2)]),
+        Ok(serialized_proof)
+    );
+}
