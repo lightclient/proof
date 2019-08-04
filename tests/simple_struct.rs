@@ -1,7 +1,7 @@
 use ethereum_types::U256;
 use proof::cache::hash_children;
 use proof::field::{Node, Primitive};
-use proof::{Error, MerkleTreeOverlay, NodeIndex, Proof, Path, SerializedProof};
+use proof::{Error, MerkleTreeOverlay, Proof, Path, SerializedProof};
 
 // A's merkle tree
 //
@@ -25,14 +25,6 @@ struct S {
 impl MerkleTreeOverlay for S {
     fn height() -> u8 {
         2
-    }
-
-    fn first_leaf() -> NodeIndex {
-        3
-    }
-
-    fn last_leaf() -> NodeIndex {
-        4
     }
 
     fn get_node(path: Vec<Path>) -> Result<Node, Error> {

@@ -1,6 +1,6 @@
 use ethereum_types::U256;
 use proof::field::{Composite, Node};
-use proof::{Error, MerkleTreeOverlay, NodeIndex, Proof, Path, SerializedProof, hash_children};
+use proof::{Error, MerkleTreeOverlay, Proof, Path, SerializedProof, hash_children};
 use ssz_types::FixedVector;
 use typenum::U4;
 
@@ -19,14 +19,6 @@ struct S {
 // Implemented by derive macro
 impl MerkleTreeOverlay for S {
     fn height() -> u8 {
-        0
-    }
-
-    fn first_leaf() -> NodeIndex {
-        0
-    }
-
-    fn last_leaf() -> NodeIndex {
         0
     }
 

@@ -240,14 +240,6 @@ pub fn proof_derive(input: TokenStream) -> TokenStream {
                 #height as u8
             }
 
-            fn first_leaf() -> proof::NodeIndex {
-                (1_u64 << Self::height()) - 1
-            }
-
-            fn last_leaf() -> proof::NodeIndex {
-                (1_u64 << Self::height() + 1) - 2
-            }
-
             fn get_node(path: Vec<proof::Path>) -> Result<proof::field::Node, proof::Error> {
                 #(#if_chain else)*
                 if let Some(p) = path.first() {

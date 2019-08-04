@@ -18,10 +18,5 @@ pub trait MerkleTreeOverlay {
 
     /// Returns the height of the merkle tree.
     fn height() -> u8;
-
-    /// Returns the index of the first leaf in the merkle tree.
-    fn first_leaf() -> NodeIndex;
-
-    /// Returns the index of the last leaf in the merkle tree.
-    fn last_leaf() -> NodeIndex;
 }
+
