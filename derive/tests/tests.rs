@@ -111,8 +111,6 @@ struct B {
 #[test]
 fn simple_fixed_vector() {
     assert_eq!(B::height(), 1);
-    assert_eq!(B::first_leaf(), 1);
-    assert_eq!(B::last_leaf(), 2);
 
     assert_eq!(
         B::get_node(vec![Path::Ident("a".to_string())]),

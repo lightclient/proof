@@ -32,5 +32,5 @@ pub struct Primitive {
 pub struct Composite {
     pub index: NodeIndex,
     pub ident: String,
-    pub height: u8,
+    pub height: u64,
 }

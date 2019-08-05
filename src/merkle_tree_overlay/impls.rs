@@ -1,26 +1,22 @@
 use super::MerkleTreeOverlay;
 use crate::error::{Error, Result};
 use crate::field::{Composite, Node, Primitive};
-use crate::tree_arithmetic::zeroed::{left_most_leaf, right_most_leaf, subtree_index_to_general};
+use crate::tree_arithmetic::zeroed::{left_most_leaf, subtree_index_to_general};
 use crate::tree_arithmetic::{log_base_two, next_power_of_two};
+use crate::types::{FixedVector, VariableList};
 use crate::{NodeIndex, Path, BYTES_PER_CHUNK};
 use ethereum_types::U256;
-use ssz_types::{FixedVector, VariableList};
 use typenum::Unsigned;
 
 macro_rules! impl_merkle_overlay_for_basic_type {
     ($type: ident, $bit_size: expr) => {
         impl MerkleTreeOverlay for $type {
-            fn height() -> u8 {
+            fn height() -> u64 {
                 0
             }
 
-            fn first_leaf() -> NodeIndex {
-                0
-            }
-
-            fn last_leaf() -> NodeIndex {
-                0
+            fn min_repr_size() -> u64 {
+                ($bit_size / 8) as u64
             }
 
             fn get_node(path: Vec<Path>) -> Result<Node> {
@@ -74,10 +70,11 @@ impl_merkle_overlay_for_basic_type!(usize, std::mem::size_of::<usize>());
 macro_rules! impl_merkle_overlay_for_collection_type {
     ($type: ident, $is_variable_length: expr) => {
         impl<T: MerkleTreeOverlay, N: Unsigned> MerkleTreeOverlay for $type<T, N> {
-            fn height() -> u8 {
-                let items_per_chunk = (BYTES_PER_CHUNK / std::mem::size_of::<T>()) as u64;
+            fn height() -> u64 {
+                let items_per_chunk = BYTES_PER_CHUNK as u64 / T::min_repr_size();
+                // TODO: what if division is 0?
                 let num_leaves = next_power_of_two(N::to_u64() / items_per_chunk);
-                let data_tree_height = log_base_two(num_leaves) as u8;
+                let data_tree_height = log_base_two(num_leaves);
 
                 if $is_variable_length {
                     // Add one to account for the data root and the length of the list.
@@ -87,18 +84,11 @@ macro_rules! impl_merkle_overlay_for_collection_type {
                 }
             }
 
-            fn first_leaf() -> NodeIndex {
-                left_most_leaf(0, Self::height() as u64)
-            }
-
-            fn last_leaf() -> NodeIndex {
-                if $is_variable_length {
-                    // The last leaf in the data tree would be the right most leaf in the subtree
-                    // rooted at 1, because the subtree rooted at 2 only defines the length of the
-                    // structure and all of its children are unattached.
-                    subtree_index_to_general(1, right_most_leaf(0, (Self::height() - 1) as u64))
+            fn min_repr_size() -> u64 {
+                if Self::height() > 0 {
+                    32
                 } else {
-                    right_most_leaf(0, Self::height() as u64)
+                    T::min_repr_size() * N::to_u64()
                 }
             }
 
@@ -113,8 +103,9 @@ macro_rules! impl_merkle_overlay_for_collection_type {
                             return Err(Error::IndexOutOfBounds(*position));
                         }
 
-                        let items_per_chunk = (BYTES_PER_CHUNK / std::mem::size_of::<T>()) as u64;
-                        let leaf_index = Self::first_leaf() + (position / items_per_chunk);
+                        let first_leaf = left_most_leaf(0, Self::height() as u64);
+                        let items_per_chunk = (BYTES_PER_CHUNK as u64 / T::min_repr_size()) as u64;
+                        let leaf_index = first_leaf + (position / items_per_chunk);
 
                         // If the path terminates here, return the node in the current tree.
                         if path.len() == 1 {
@@ -156,8 +147,9 @@ impl_merkle_overlay_for_collection_type!(VariableList, true);
 impl_merkle_overlay_for_collection_type!(FixedVector, false);
 
 fn generate_leaf<S: MerkleTreeOverlay, T: MerkleTreeOverlay>(index: NodeIndex) -> Node {
-    let node_type = T::get_node(vec![]);
-    match node_type {
+    let first_leaf = left_most_leaf(0, S::height() as u64);
+
+    match T::get_node(vec![]) {
         Ok(_) => {
             let item_size = std::mem::size_of::<T>() as u8;
             let items_per_chunk = BYTES_PER_CHUNK as u8 / item_size;
@@ -166,8 +158,7 @@ fn generate_leaf<S: MerkleTreeOverlay, T: MerkleTreeOverlay>(index: NodeIndex) -
                 .iter()
                 .enumerate()
                 .map(|(i, _)| Primitive {
-                    ident: ((index - S::first_leaf()) * items_per_chunk as u64 + i as u64)
-                        .to_string(),
+                    ident: ((index - first_leaf) * items_per_chunk as u64 + i as u64).to_string(),
                     index: index,
                     size: item_size,
                     offset: i as u8 * item_size,
@@ -177,7 +168,7 @@ fn generate_leaf<S: MerkleTreeOverlay, T: MerkleTreeOverlay>(index: NodeIndex) -
             Node::Primitive(values)
         }
         Err(_) => Node::Composite(Composite {
-            ident: (index - S::first_leaf()).to_string(),
+            ident: (index - first_leaf).to_string(),
             index,
             height: T::height(),
         }),
@@ -353,8 +344,6 @@ mod tests {
         //     7   8 9  10 11 12 13 14      <= leaf
 
         assert_eq!(T::height(), 3);
-        assert_eq!(T::first_leaf(), 7);
-        assert_eq!(T::last_leaf(), 14);
 
         for i in 7..=14 {
             assert_eq!(
@@ -381,8 +370,6 @@ mod tests {
         type T = FixedVector<u8, U32>;
 
         assert_eq!(T::height(), 0);
-        assert_eq!(T::first_leaf(), 0);
-        assert_eq!(T::last_leaf(), 0);
 
         // Generate root node
         let node = Node::Primitive(
@@ -425,8 +412,6 @@ mod tests {
         //  31 32 33 34 35 36 37 38 39 40 41 42 43 44 45 46 47 48 49 50 51 52 53 54 55 56 57 58 59 60 61 62    <= leaves
 
         assert_eq!(T::height(), 0);
-        assert_eq!(T::first_leaf(), 0);
-        assert_eq!(T::last_leaf(), 0);
 
         assert_eq!(
             T::get_node(index_path(0)),

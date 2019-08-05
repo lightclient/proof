@@ -2,7 +2,7 @@ pub mod impls;
 
 use crate::error::Result;
 use crate::field::Node;
-use crate::{NodeIndex, Path};
+use crate::Path;
 
 /// Defines an interface for interacting with `Proof`s via `Path`s.
 pub trait MerkleTreeOverlay {
@@ -17,11 +17,8 @@ pub trait MerkleTreeOverlay {
     fn get_node(path: Vec<Path>) -> Result<Node>;
 
     /// Returns the height of the merkle tree.
-    fn height() -> u8;
+    fn height() -> u64;
 
-    /// Returns the index of the first leaf in the merkle tree.
-    fn first_leaf() -> NodeIndex;
-
-    /// Returns the index of the last leaf in the merkle tree.
-    fn last_leaf() -> NodeIndex;
+    /// Returns the minimum number of bytes needed to represent the type's value.
+    fn min_repr_size() -> u64;
 }

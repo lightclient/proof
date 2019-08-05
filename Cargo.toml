@@ -12,6 +12,5 @@ edition = "2018"
 ethereum-types = "0.6.0"
 typenum = "1.10.0"
 sha2 = "0.8.0"
-ssz_types = { git = "https://github.com/sigp/lighthouse", branch="master" }
 eth2_ssz = "0.1.2"
 eth2_ssz_derive = "0.1.0"

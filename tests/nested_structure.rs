@@ -3,8 +3,8 @@ use proof::cache::hash_children;
 use proof::field::{Composite, Node, Primitive};
 use proof::impls::replace_index;
 use proof::tree_arithmetic::zeroed::subtree_index_to_general;
-use proof::{Error, MerkleTreeOverlay, NodeIndex, Proof, Path, SerializedProof};
-use ssz_types::VariableList;
+use proof::types::VariableList;
+use proof::{Error, MerkleTreeOverlay, Path, Proof, SerializedProof};
 use typenum::U8;
 
 // S's merkle tree
@@ -25,16 +25,12 @@ struct S {
 }
 
 impl MerkleTreeOverlay for S {
-    fn height() -> u8 {
+    fn height() -> u64 {
         1
     }
 
-    fn first_leaf() -> NodeIndex {
-        1
-    }
-
-    fn last_leaf() -> NodeIndex {
-        2
+    fn min_repr_size() -> u64 {
+        32
     }
 
     fn get_node(path: Vec<Path>) -> Result<Node, Error> {
@@ -206,9 +202,11 @@ fn readme_test() {
 
     let serialized_proof = SerializedProof {
         indices: vec![1, 6, 12, 23, 24],
-        chunks: vec![one, six, twelve, twenty_three, twenty_four].into_iter().flatten().collect(),
+        chunks: vec![one, six, twelve, twenty_three, twenty_four]
+            .into_iter()
+            .flatten()
+            .collect(),
     };
-
     let mut proof = Proof::<S>::new(serialized_proof.clone());
 
     assert_eq!(proof.fill(), Ok(()));

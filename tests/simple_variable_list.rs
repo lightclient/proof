@@ -1,6 +1,6 @@
 use proof::field::{Composite, Node};
-use proof::{Error, MerkleTreeOverlay, NodeIndex, Proof, Path, SerializedProof, hash_children};
-use ssz_types::VariableList;
+use proof::types::VariableList;
+use proof::{hash_children, Error, MerkleTreeOverlay, Path, Proof, SerializedProof};
 use typenum::U4;
 
 // S's merkle tree
@@ -16,16 +16,12 @@ struct S {
 }
 
 impl MerkleTreeOverlay for S {
-    fn height() -> u8 {
+    fn height() -> u64 {
         0
     }
 
-    fn first_leaf() -> NodeIndex {
-        0
-    }
-
-    fn last_leaf() -> NodeIndex {
-        0
+    fn min_repr_size() -> u64 {
+        32
     }
 
     fn get_node(path: Vec<Path>) -> Result<Node, Error> {

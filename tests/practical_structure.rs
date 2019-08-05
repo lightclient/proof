@@ -2,8 +2,8 @@ use proof::cache::hash_children;
 use proof::field::{Composite, Node, Primitive};
 use proof::impls::replace_index;
 use proof::tree_arithmetic::zeroed::subtree_index_to_general;
-use proof::{Error, MerkleTreeOverlay, NodeIndex, Proof, Path, SerializedProof};
-use ssz_types::{FixedVector, VariableList};
+use proof::types::{FixedVector, VariableList};
+use proof::{Error, MerkleTreeOverlay, Path, Proof, SerializedProof};
 use typenum::{U32, U8};
 
 #[derive(Debug, Default)]
@@ -18,16 +18,12 @@ struct State {
 }
 
 impl MerkleTreeOverlay for Message {
-    fn height() -> u8 {
+    fn height() -> u64 {
         1
     }
 
-    fn first_leaf() -> NodeIndex {
-        1
-    }
-
-    fn last_leaf() -> NodeIndex {
-        2
+    fn min_repr_size() -> u64 {
+        32
     }
 
     fn get_node(path: Vec<Path>) -> Result<Node, Error> {
@@ -55,16 +51,12 @@ impl MerkleTreeOverlay for Message {
 }
 
 impl MerkleTreeOverlay for State {
-    fn height() -> u8 {
+    fn height() -> u64 {
         0
     }
 
-    fn first_leaf() -> NodeIndex {
-        0
-    }
-
-    fn last_leaf() -> NodeIndex {
-        0
+    fn min_repr_size() -> u64 {
+        32
     }
 
     fn get_node(path: Vec<Path>) -> Result<Node, Error> {
