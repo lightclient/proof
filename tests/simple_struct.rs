@@ -1,7 +1,7 @@
 use ethereum_types::U256;
 use proof::cache::hash_children;
 use proof::field::{Node, Primitive};
-use proof::{Error, MerkleTreeOverlay, Proof, Path, SerializedProof};
+use proof::{Error, MerkleTreeOverlay, Path, Proof, SerializedProof};
 
 // A's merkle tree
 //
@@ -23,8 +23,12 @@ struct S {
 
 // Implemented by derive macro
 impl MerkleTreeOverlay for S {
-    fn height() -> u8 {
+    fn height() -> u64 {
         2
+    }
+
+    fn min_repr_size() -> u64 {
+        32
     }
 
     fn get_node(path: Vec<Path>) -> Result<Node, Error> {
@@ -118,8 +122,5 @@ fn roundtrip_partial() {
 
     let mut p = Proof::<S>::new(sp.clone());
     assert_eq!(p.fill(), Ok(()));
-    assert_eq!(
-        Ok(sp),
-        p.extract(vec![Path::Ident("a".to_string())])
-    );
+    assert_eq!(Ok(sp), p.extract(vec![Path::Ident("a".to_string())]));
 }

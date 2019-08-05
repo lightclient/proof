@@ -11,17 +11,18 @@ pub mod cache;
 mod error;
 pub mod field;
 mod merkle_tree_overlay;
-mod proof;
 mod path;
+mod proof;
 mod ser;
 pub mod tree_arithmetic;
+pub mod types;
 
+pub use crate::cache::hash_children;
 pub use crate::error::Error;
 pub use crate::merkle_tree_overlay::{impls, MerkleTreeOverlay};
-pub use crate::proof::Proof;
 pub use crate::path::Path;
+pub use crate::proof::Proof;
 pub use crate::ser::SerializedProof;
-pub use crate::cache::hash_children;
 
 /// General index for a node in a merkle tree.
 pub type NodeIndex = u64;
