@@ -1,7 +1,6 @@
 use ethereum_types::U256;
-use proof::cache::hash_children;
 use proof::node::Node;
-use proof::{Error, MerkleTreeOverlay, PathElement, Proof, SerializedProof};
+use proof::{hash_children, Error, MerkleTreeOverlay, PathElement, Proof, SerializedProof};
 
 // A's merkle tree
 //

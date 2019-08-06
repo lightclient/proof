@@ -7,7 +7,7 @@
 //! assuming that each of the child objects have implemented the
 //! [`MerkleTreeOverlay`](trait.MerkleTreeOverlay.html) trait.
 
-pub mod cache;
+pub mod backend;
 mod error;
 mod merkle_tree_overlay;
 pub mod node;
@@ -17,7 +17,7 @@ mod ser;
 pub mod tree_arithmetic;
 pub mod types;
 
-pub use crate::cache::hash_children;
+pub use crate::backend::hash_children;
 pub use crate::error::Error;
 pub use crate::merkle_tree_overlay::{impls, MerkleTreeOverlay};
 pub use crate::path::PathElement;

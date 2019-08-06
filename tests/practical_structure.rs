@@ -1,9 +1,8 @@
-use proof::cache::hash_children;
 use proof::impls::replace_index;
 use proof::node::Node;
 use proof::tree_arithmetic::zeroed::subtree_index_to_general;
 use proof::types::{FixedVector, VariableList};
-use proof::{Error, MerkleTreeOverlay, PathElement, Proof, SerializedProof};
+use proof::{hash_children, Error, MerkleTreeOverlay, PathElement, Proof, SerializedProof};
 use typenum::{U32, U8};
 
 #[derive(Debug, Default)]

@@ -6,36 +6,34 @@ use std::collections::HashMap;
 
 /// Stores the mapping of nodes to their chunks.
 #[derive(Clone, Debug, Default, PartialEq)]
-pub struct Cache {
-    cache: HashMap<NodeIndex, Vec<u8>>,
+pub struct Backend {
+    db: HashMap<NodeIndex, Vec<u8>>,
 }
 
-impl Cache {
+impl Backend {
     /// Instantiate an empty `Cache`.
     pub fn new() -> Self {
-        Self {
-            cache: HashMap::new(),
-        }
+        Self { db: HashMap::new() }
     }
 
     /// Gets a reference to the chunk coresponding to the node index.
     pub fn get(&self, index: NodeIndex) -> Option<&Vec<u8>> {
-        self.cache.get(&index)
+        self.db.get(&index)
     }
 
     /// Sets the chunk for the node index and returns the old value.
     pub fn insert(&mut self, index: NodeIndex, chunk: Vec<u8>) -> Option<Vec<u8>> {
-        self.cache.insert(index, chunk)
+        self.db.insert(index, chunk)
     }
 
-    /// Retrieves a vector of set node indicies.
+    /// Retrieves a vector of loaded node indicies.
     pub fn nodes(&self) -> Vec<NodeIndex> {
-        self.cache.keys().clone().map(|x| x.to_owned()).collect()
+        self.db.keys().clone().map(|x| x.to_owned()).collect()
     }
 
     /// Returns `true` if the cache contains a chunk for the specified node index.
     pub fn contains_node(&self, index: NodeIndex) -> bool {
-        self.cache.contains_key(&index)
+        self.db.contains_key(&index)
     }
 
     /// Determines if the current merkle tree is valid.
@@ -118,7 +116,7 @@ pub fn hash_children(left: &[u8], right: &[u8]) -> Vec<u8> {
     Sha256::digest(&children).as_ref().into()
 }
 
-impl std::ops::Index<usize> for Cache {
+impl std::ops::Index<usize> for Backend {
     type Output = Vec<u8>;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -133,39 +131,39 @@ mod tests {
 
     #[test]
     fn can_fill() {
-        let mut cache = Cache::default();
+        let mut db = Backend::default();
 
         // leaf nodes
-        cache.insert(6, vec![6; BYTES_PER_CHUNK]);
-        cache.insert(5, vec![5; BYTES_PER_CHUNK]);
-        cache.insert(4, vec![4; BYTES_PER_CHUNK]);
-        cache.insert(3, vec![3; BYTES_PER_CHUNK]);
+        db.insert(6, vec![6; BYTES_PER_CHUNK]);
+        db.insert(5, vec![5; BYTES_PER_CHUNK]);
+        db.insert(4, vec![4; BYTES_PER_CHUNK]);
+        db.insert(3, vec![3; BYTES_PER_CHUNK]);
 
-        let two = hash_children(&cache[5], &cache[6]);
-        let one = hash_children(&cache[3], &cache[4]);
+        let two = hash_children(&db[5], &db[6]);
+        let one = hash_children(&db[3], &db[4]);
         let root = hash_children(&one, &two);
 
-        assert_eq!(cache.fill(), Ok(()));
-        assert_eq!(cache.is_valid(root), true);
+        assert_eq!(db.fill(), Ok(()));
+        assert_eq!(db.is_valid(root), true);
     }
     #[test]
     fn is_valid() {
-        let mut cache: Cache = Cache::default();
+        let mut db = Backend::default();
 
         // leaf nodes
-        cache.insert(6, vec![6; BYTES_PER_CHUNK]);
-        cache.insert(5, vec![5; BYTES_PER_CHUNK]);
-        cache.insert(4, vec![4; BYTES_PER_CHUNK]);
-        cache.insert(3, vec![3; BYTES_PER_CHUNK]);
+        db.insert(6, vec![6; BYTES_PER_CHUNK]);
+        db.insert(5, vec![5; BYTES_PER_CHUNK]);
+        db.insert(4, vec![4; BYTES_PER_CHUNK]);
+        db.insert(3, vec![3; BYTES_PER_CHUNK]);
 
         // intermediate nodes
-        cache.insert(2, hash_children(&cache[5], &cache[6]));
-        cache.insert(1, hash_children(&cache[3], &cache[4]));
+        db.insert(2, hash_children(&db[5], &db[6]));
+        db.insert(1, hash_children(&db[3], &db[4]));
 
         // root node
-        let root = hash_children(&cache[1], &cache[2]);
-        cache.insert(0, root.clone());
+        let root = hash_children(&db[1], &db[2]);
+        db.insert(0, root.clone());
 
-        assert_eq!(cache.is_valid(root), true);
+        assert_eq!(db.is_valid(root), true);
     }
 }

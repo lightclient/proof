@@ -1,5 +1,5 @@
 use super::{NodeIndex, SerializedProof, BYTES_PER_CHUNK};
-use crate::cache::Cache;
+use crate::backend::Backend;
 use crate::error::{Error, Result};
 use crate::merkle_tree_overlay::MerkleTreeOverlay;
 use crate::path::PathElement;
@@ -11,7 +11,7 @@ use std::marker::PhantomData;
 /// merkle tree.
 #[derive(Clone, Debug, Default, PartialEq)]
 pub struct Proof<T: MerkleTreeOverlay> {
-    cache: Cache,
+    db: Backend,
     _phantom: PhantomData<T>,
 }
 
@@ -19,7 +19,7 @@ impl<T: MerkleTreeOverlay> Proof<T> {
     /// Initialize `Proof` directly from a `SerializedProof`.
     pub fn new(proof: SerializedProof) -> Self {
         let mut ret = Self {
-            cache: Cache::new(),
+            db: Backend::new(),
             _phantom: PhantomData,
         };
 
@@ -33,7 +33,7 @@ impl<T: MerkleTreeOverlay> Proof<T> {
     pub fn load(&mut self, proof: SerializedProof) -> Result<()> {
         for (i, index) in proof.indices.iter().enumerate() {
             let chunk = proof.chunks[i * BYTES_PER_CHUNK..(i + 1) * BYTES_PER_CHUNK].to_vec();
-            self.cache.insert(*index, chunk.clone());
+            self.db.insert(*index, chunk.clone());
         }
 
         Ok(())
@@ -50,7 +50,7 @@ impl<T: MerkleTreeOverlay> Proof<T> {
         let mut visitor = node.index;
         let mut indices: Vec<NodeIndex> = vec![visitor];
         let mut chunks: Vec<u8> = self
-            .cache
+            .db
             .get(visitor)
             .ok_or(Error::ChunkNotLoaded(visitor))?
             .clone();
@@ -62,11 +62,7 @@ impl<T: MerkleTreeOverlay> Proof<T> {
 
             if !(indices.contains(&left) && indices.contains(&right)) {
                 indices.push(sibling);
-                chunks.extend(
-                    self.cache
-                        .get(sibling)
-                        .ok_or(Error::ChunkNotLoaded(sibling))?,
-                );
+                chunks.extend(self.db.get(sibling).ok_or(Error::ChunkNotLoaded(sibling))?);
             }
 
             // visitor /= 2, when 1 indexed
@@ -84,7 +80,7 @@ impl<T: MerkleTreeOverlay> Proof<T> {
 
         let (index, begin, end) = bytes_at_path_helper::<T>(path)?;
 
-        Ok(self.cache.get(index).ok_or(Error::ChunkNotLoaded(index))?[begin..end].to_vec())
+        Ok(self.db.get(index).ok_or(Error::ChunkNotLoaded(index))?[begin..end].to_vec())
     }
 
     /// Replaces the bytes at `path` with `bytes`.
@@ -96,7 +92,7 @@ impl<T: MerkleTreeOverlay> Proof<T> {
         let (index, begin, end) = bytes_at_path_helper::<T>(path)?;
 
         let chunk = self
-            .cache
+            .db
             .get(index)
             .ok_or(Error::ChunkNotLoaded(index))?
             .to_vec()
@@ -112,28 +108,28 @@ impl<T: MerkleTreeOverlay> Proof<T> {
             })
             .collect();
 
-        self.cache.insert(index, chunk);
+        self.db.insert(index, chunk);
         Ok(())
     }
 
     /// Determines if the current merkle tree is valid.
     pub fn is_valid(&self, root: Vec<u8>) -> bool {
-        self.cache.is_valid(root)
+        self.db.is_valid(root)
     }
 
     /// Inserts missing nodes into the merkle tree that can be generated from existing nodes.
     pub fn fill(&mut self) -> Result<()> {
-        self.cache.fill()
+        self.db.fill()
     }
 
     /// Returns the root node of the proof if it has been calculated.
     pub fn root(&self) -> Option<&Vec<u8>> {
-        self.cache.get(0)
+        self.db.get(0)
     }
 
     /// Recalculates all intermediate nodes and root using the available leaves.
     pub fn refresh(&mut self) -> Result<()> {
-        self.cache.refresh()
+        self.db.refresh()
     }
 }
 
