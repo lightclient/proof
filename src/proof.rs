@@ -1,9 +1,8 @@
 use super::{NodeIndex, SerializedProof, BYTES_PER_CHUNK};
 use crate::cache::Cache;
 use crate::error::{Error, Result};
-use crate::field::Node;
 use crate::merkle_tree_overlay::MerkleTreeOverlay;
-use crate::path::Path;
+use crate::path::PathElement;
 use crate::tree_arithmetic::zeroed::sibling_index;
 
 use std::marker::PhantomData;
@@ -41,14 +40,14 @@ impl<T: MerkleTreeOverlay> Proof<T> {
     }
 
     /// Generates a `SerializedProof` proving that `path` is a part of the current merkle tree.
-    pub fn extract(&self, path: Vec<Path>) -> Result<SerializedProof> {
+    pub fn extract(&self, path: Vec<PathElement>) -> Result<SerializedProof> {
         if path.len() == 0 {
             return Err(Error::EmptyPath());
         }
 
         let node = T::get_node(path.clone())?;
 
-        let mut visitor = node.get_index();
+        let mut visitor = node.index;
         let mut indices: Vec<NodeIndex> = vec![visitor];
         let mut chunks: Vec<u8> = self
             .cache
@@ -78,7 +77,7 @@ impl<T: MerkleTreeOverlay> Proof<T> {
     }
 
     /// Returns the bytes representation of the object associated with `path`
-    pub fn get_bytes(&self, path: Vec<Path>) -> Result<Vec<u8>> {
+    pub fn get_bytes(&self, path: Vec<PathElement>) -> Result<Vec<u8>> {
         if path.len() == 0 {
             return Err(Error::EmptyPath());
         }
@@ -89,7 +88,7 @@ impl<T: MerkleTreeOverlay> Proof<T> {
     }
 
     /// Replaces the bytes at `path` with `bytes`.
-    pub fn set_bytes(&mut self, path: Vec<Path>, bytes: Vec<u8>) -> Result<()> {
+    pub fn set_bytes(&mut self, path: Vec<PathElement>, bytes: Vec<u8>) -> Result<()> {
         if path.len() == 0 {
             return Err(Error::EmptyPath());
         }
@@ -141,23 +140,17 @@ impl<T: MerkleTreeOverlay> Proof<T> {
 /// Recursively traverse the tree structure, matching the appropriate `path` element with its index,
 /// eventually returning the chunk index, beginning offset, and end offset of the associated value.
 fn bytes_at_path_helper<T: MerkleTreeOverlay + ?Sized>(
-    path: Vec<Path>,
+    path: Vec<PathElement>,
 ) -> Result<(NodeIndex, usize, usize)> {
     if path.len() == 0 {
         return Err(Error::EmptyPath());
     }
 
-    match T::get_node(path.clone())? {
-        Node::Composite(c) => Ok((c.index, 0, 32)),
-        Node::Length(l) => Ok((l.index, 0, 32)),
-        Node::Primitive(l) => {
-            for p in l.clone() {
-                if p.ident == path.last().unwrap().to_string() {
-                    return Ok((p.index, p.offset as usize, (p.offset + p.size) as usize));
-                }
-            }
+    let node = T::get_node(path.clone())?;
 
-            Err(Error::InvalidPath(path[0].clone()))
-        }
-    }
+    Ok((
+        node.index,
+        node.offset.into(),
+        (node.offset + node.size).into(),
+    ))
 }

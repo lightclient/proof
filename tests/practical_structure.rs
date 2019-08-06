@@ -1,9 +1,9 @@
 use proof::cache::hash_children;
-use proof::field::{Composite, Node, Primitive};
 use proof::impls::replace_index;
+use proof::node::Node;
 use proof::tree_arithmetic::zeroed::subtree_index_to_general;
 use proof::types::{FixedVector, VariableList};
-use proof::{Error, MerkleTreeOverlay, Path, Proof, SerializedProof};
+use proof::{Error, MerkleTreeOverlay, PathElement, Proof, SerializedProof};
 use typenum::{U32, U8};
 
 #[derive(Debug, Default)]
@@ -26,19 +26,25 @@ impl MerkleTreeOverlay for Message {
         32
     }
 
-    fn get_node(path: Vec<Path>) -> Result<Node, Error> {
-        if Some(&Path::Ident("timestamp".to_string())) == path.first() {
-            Ok(Node::Primitive(vec![Primitive {
-                ident: "timestamp".to_string(),
+    fn is_list() -> bool {
+        false
+    }
+
+    fn get_node(path: Vec<PathElement>) -> Result<Node, Error> {
+        if Some(&PathElement::from_ident_str("timestamp")) == path.first() {
+            Ok(Node {
+                ident: PathElement::from_ident_str("timestamp"),
                 index: 1,
-                size: 8,
                 offset: 0,
-            }]))
-        } else if Some(&Path::Ident("message".to_string())) == path.first() {
+                size: 8,
+                height: 0,
+                is_list: false,
+            })
+        } else if Some(&PathElement::from_ident_str("message")) == path.first() {
             match FixedVector::<u8, U32>::get_node(path[1..].to_vec()) {
                 Ok(n) => Ok(replace_index(
                     n.clone(),
-                    subtree_index_to_general(2, n.get_index()),
+                    subtree_index_to_general(2, n.index),
                 )),
                 e => e,
             }
@@ -59,14 +65,21 @@ impl MerkleTreeOverlay for State {
         32
     }
 
-    fn get_node(path: Vec<Path>) -> Result<Node, Error> {
-        if Some(&Path::Ident("messages".to_string())) == path.first() {
+    fn is_list() -> bool {
+        true
+    }
+
+    fn get_node(path: Vec<PathElement>) -> Result<Node, Error> {
+        if Some(&PathElement::from_ident_str("messages")) == path.first() {
             if path.len() == 1 {
-                Ok(Node::Composite(Composite {
-                    ident: "messages".to_owned(),
+                Ok(Node {
+                    ident: PathElement::from_ident_str("messages"),
                     index: 0,
+                    offset: 0,
+                    size: 0,
                     height: VariableList::<Message, U8>::height().into(),
-                }))
+                    is_list: true,
+                })
             } else {
                 VariableList::<Message, U8>::get_node(path[1..].to_vec())
             }
@@ -125,18 +138,18 @@ fn roundtrip_partial() {
     // TESTING TIMESTAMPS
     assert_eq!(
         proof.get_bytes(vec![
-            Path::Ident("messages".to_string()),
-            Path::Index(0),
-            Path::Ident("timestamp".to_string())
+            PathElement::from_ident_str("messages"),
+            PathElement::Index(0),
+            PathElement::from_ident_str("timestamp"),
         ]),
         Ok(vec![1, 0, 0, 0, 0, 0, 0, 0])
     );
 
     assert_eq!(
         proof.get_bytes(vec![
-            Path::Ident("messages".to_string()),
-            Path::Index(1),
-            Path::Ident("timestamp".to_string())
+            PathElement::from_ident_str("messages"),
+            PathElement::Index(1),
+            PathElement::from_ident_str("timestamp"),
         ]),
         Ok(vec![2, 0, 0, 0, 0, 0, 0, 0])
     );
@@ -144,20 +157,20 @@ fn roundtrip_partial() {
     // TESTING MESSAGES
     assert_eq!(
         proof.get_bytes(vec![
-            Path::Ident("messages".to_string()),
-            Path::Index(0),
-            Path::Ident("message".to_string()),
-            Path::Index(1),
+            PathElement::from_ident_str("messages"),
+            PathElement::Index(0),
+            PathElement::from_ident_str("message"),
+            PathElement::Index(1),
         ]),
         Ok(vec![1])
     );
 
     assert_eq!(
         proof.get_bytes(vec![
-            Path::Ident("messages".to_string()),
-            Path::Index(1),
-            Path::Ident("message".to_string()),
-            Path::Index(31),
+            PathElement::from_ident_str("messages"),
+            PathElement::Index(1),
+            PathElement::from_ident_str("message"),
+            PathElement::Index(31),
         ]),
         Ok(vec![42])
     );

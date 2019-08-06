@@ -1,10 +1,10 @@
 use ethereum_types::U256;
 use proof::cache::hash_children;
-use proof::field::{Composite, Node, Primitive};
 use proof::impls::replace_index;
+use proof::node::Node;
 use proof::tree_arithmetic::zeroed::subtree_index_to_general;
 use proof::types::VariableList;
-use proof::{Error, MerkleTreeOverlay, Path, Proof, SerializedProof};
+use proof::{Error, MerkleTreeOverlay, PathElement, Proof, SerializedProof};
 use typenum::U8;
 
 // S's merkle tree
@@ -33,36 +33,45 @@ impl MerkleTreeOverlay for S {
         32
     }
 
-    fn get_node(path: Vec<Path>) -> Result<Node, Error> {
-        if Some(&Path::Ident("a".to_string())) == path.first() {
+    fn is_list() -> bool {
+        false
+    }
+
+    fn get_node(path: Vec<PathElement>) -> Result<Node, Error> {
+        if Some(&PathElement::from_ident_str("a")) == path.first() {
             if path.len() == 1 {
-                Ok(Node::Primitive(vec![Primitive {
-                    ident: "a".to_owned(),
+                Ok(Node {
+                    ident: PathElement::from_ident_str("a"),
                     index: 1,
                     size: 32,
                     offset: 0,
-                }]))
+                    height: 0,
+                    is_list: false,
+                })
             } else {
                 match U256::get_node(path[1..].to_vec()) {
                     Ok(n) => Ok(replace_index(
                         n.clone(),
-                        subtree_index_to_general(1, n.get_index()),
+                        subtree_index_to_general(1, n.index),
                     )),
                     e => e,
                 }
             }
-        } else if Some(&Path::Ident("b".to_string())) == path.first() {
+        } else if Some(&PathElement::from_ident_str("b")) == path.first() {
             if path.len() == 1 {
-                Ok(Node::Composite(Composite {
-                    ident: "b".to_owned(),
+                Ok(Node {
+                    ident: PathElement::from_ident_str("b"),
                     index: 2,
+                    offset: 0,
+                    size: 0,
                     height: 3,
-                }))
+                    is_list: true,
+                })
             } else {
                 match VariableList::<u128, U8>::get_node(path[1..].to_vec()) {
                     Ok(n) => Ok(replace_index(
                         n.clone(),
-                        subtree_index_to_general(2, n.get_index()),
+                        subtree_index_to_general(2, n.index),
                     )),
                     e => e,
                 }
@@ -98,12 +107,15 @@ fn roundtrip_partial() {
     assert_eq!(p.load(sp.clone()), Ok(()));
     assert_eq!(p.fill(), Ok(()));
     assert_eq!(
-        p.extract(vec![Path::Ident("b".to_string()), Path::Index(2)]),
+        p.extract(vec![
+            PathElement::Ident("b".to_string()),
+            PathElement::Index(2)
+        ]),
         Ok(sp)
     );
 
     // Check for `Error::ChunkNotLoaded(_)`
-    let generate_path = || vec![Path::Ident("b".to_string()), Path::Index(5)];
+    let generate_path = || vec![PathElement::Ident("b".to_string()), PathElement::Index(5)];
 
     assert_eq!(p.get_bytes(generate_path()), Err(Error::ChunkNotLoaded(25)));
     assert_eq!(
@@ -135,20 +147,26 @@ fn get_and_set_by_path() {
 
     // Check S.a
     assert_eq!(
-        p.get_bytes(vec![Path::Ident("a".to_string())]),
+        p.get_bytes(vec![PathElement::from_ident_str("a")]),
         Ok(arr[0..32].to_vec())
     );
 
     // Check S.b[0..8] and set each to S.b[7]
     for i in 0_usize..8_usize {
         assert_eq!(
-            p.get_bytes(vec![Path::Ident("b".to_string()), Path::Index(i as u64)]),
+            p.get_bytes(vec![
+                PathElement::from_ident_str("b"),
+                PathElement::Index(i as u64)
+            ]),
             Ok(arr[(32 + i * 16)..(32 + ((i + 1) * 16))].to_vec())
         );
 
         assert_eq!(
             p.set_bytes(
-                vec![Path::Ident("b".to_string()), Path::Index(i as u64)],
+                vec![
+                    PathElement::from_ident_str("b"),
+                    PathElement::Index(i as u64)
+                ],
                 arr[144..160].to_vec()
             ),
             Ok(()),
@@ -158,7 +176,10 @@ fn get_and_set_by_path() {
     // Verfiy that each index was set to S.b[7]
     for i in 0_usize..8_usize {
         assert_eq!(
-            p.get_bytes(vec![Path::Ident("b".to_string()), Path::Index(i as u64)]),
+            p.get_bytes(vec![
+                PathElement::from_ident_str("b"),
+                PathElement::Index(i as u64)
+            ]),
             Ok(arr[144..160].to_vec())
         );
     }
@@ -168,7 +189,7 @@ fn get_and_set_by_path() {
     assert_eq!(p.set_bytes(vec![], vec![]), Err(Error::EmptyPath()));
 
     // Check for `Error::OutOfBounds(Path::Index(_))`
-    let generate_path = || vec![Path::Ident("b".to_string()), Path::Index(8)];
+    let generate_path = || vec![PathElement::from_ident_str("b"), PathElement::Index(8)];
 
     assert_eq!(
         p.get_bytes(generate_path()),
@@ -180,7 +201,7 @@ fn get_and_set_by_path() {
     );
 
     // Check for `Error::InvalidPath(Path::Ident(_))`
-    let generate_path = || vec![Path::Ident("c".to_string())];
+    let generate_path = || vec![PathElement::from_ident_str("c")];
 
     assert_eq!(
         p.get_bytes(generate_path()),
@@ -211,7 +232,10 @@ fn readme_test() {
 
     assert_eq!(proof.fill(), Ok(()));
     assert_eq!(
-        proof.extract(vec![Path::Ident("b".to_string()), Path::Index(2)]),
+        proof.extract(vec![
+            PathElement::from_ident_str("b"),
+            PathElement::Index(2)
+        ]),
         Ok(serialized_proof)
     );
 }
