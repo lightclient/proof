@@ -1,11 +1,11 @@
 use super::NodeIndex;
-use crate::path::Path;
+use crate::path::PathElement;
 
 /// An enum of errors that can occur when interacting with proof.
 #[derive(Debug, PartialEq)]
 pub enum Error {
     // Invalid path element
-    InvalidPath(Path),
+    InvalidPath(PathElement),
     // The path accesses an unintialized element
     IndexOutOfBounds(u64),
     // Missing chunk

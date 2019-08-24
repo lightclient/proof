@@ -1,6 +1,6 @@
-use proof::field::{Composite, Node};
+use proof::node::Node;
 use proof::types::VariableList;
-use proof::{hash_children, Error, MerkleTreeOverlay, Path, Proof, SerializedProof};
+use proof::{hash_children, Error, MerkleTreeOverlay, PathElement, Proof, SerializedProof};
 use typenum::U4;
 
 // S's merkle tree
@@ -24,14 +24,21 @@ impl MerkleTreeOverlay for S {
         32
     }
 
-    fn get_node(path: Vec<Path>) -> Result<Node, Error> {
-        if Some(&Path::Ident("a".to_string())) == path.first() {
+    fn is_list() -> bool {
+        true
+    }
+
+    fn get_node(path: Vec<PathElement>) -> Result<Node, Error> {
+        if Some(&PathElement::from_ident_str("a")) == path.first() {
             if path.len() == 1 {
-                Ok(Node::Composite(Composite {
-                    ident: "a".to_owned(),
+                Ok(Node {
+                    ident: PathElement::from_ident_str("a"),
                     index: 0,
+                    offset: 0,
+                    size: 32,
                     height: VariableList::<u128, U4>::height().into(),
-                }))
+                    is_list: true,
+                })
             } else {
                 VariableList::<u128, U4>::get_node(path[1..].to_vec())
             }
@@ -62,6 +69,9 @@ fn roundtrip_partial() {
 
     assert_eq!(
         Ok(proof),
-        p.extract(vec![Path::Ident("a".to_string()), Path::Index(0)])
+        p.extract(vec![
+            PathElement::from_ident_str("a"),
+            PathElement::Index(0)
+        ])
     );
 }

@@ -1,7 +1,6 @@
 use ethereum_types::U256;
-use proof::cache::hash_children;
-use proof::field::{Node, Primitive};
-use proof::{Error, MerkleTreeOverlay, Path, Proof, SerializedProof};
+use proof::node::Node;
+use proof::{hash_children, Error, MerkleTreeOverlay, PathElement, Proof, SerializedProof};
 
 // A's merkle tree
 //
@@ -31,67 +30,63 @@ impl MerkleTreeOverlay for S {
         32
     }
 
-    fn get_node(path: Vec<Path>) -> Result<Node, Error> {
+    fn is_list() -> bool {
+        false
+    }
+
+    fn get_node(path: Vec<PathElement>) -> Result<Node, Error> {
         let p1 = path.first();
 
-        if p1 == Some(&Path::Ident("a".to_string())) {
+        if p1 == Some(&PathElement::from_ident_str("a")) {
             if path.len() == 1 {
-                Ok(Node::Primitive(vec![Primitive {
-                    ident: "a".to_owned(),
+                Ok(Node {
+                    ident: PathElement::from_ident_str("a"),
                     index: 3,
                     size: 32,
+                    height: 0,
                     offset: 0,
-                }]))
+                    is_list: false,
+                })
             } else {
                 // not sure if this will work
                 U256::get_node(path[1..].to_vec())
             }
-        } else if p1 == Some(&Path::Ident("b".to_string())) {
+        } else if p1 == Some(&PathElement::from_ident_str("b")) {
             if path.len() == 1 {
-                Ok(Node::Primitive(vec![Primitive {
-                    ident: "b".to_owned(),
+                Ok(Node {
+                    ident: PathElement::from_ident_str("b"),
                     index: 4,
                     size: 32,
                     offset: 0,
-                }]))
+                    height: 0,
+                    is_list: false,
+                })
             } else {
                 U256::get_node(path[1..].to_vec())
             }
-        } else if p1 == Some(&Path::Ident("c".to_string())) {
+        } else if p1 == Some(&PathElement::from_ident_str("c")) {
             if path.len() == 1 {
-                Ok(Node::Primitive(vec![
-                    Primitive {
-                        ident: "c".to_owned(),
-                        index: 5,
-                        size: 16,
-                        offset: 0,
-                    },
-                    Primitive {
-                        ident: "d".to_owned(),
-                        index: 5,
-                        size: 16,
-                        offset: 16,
-                    },
-                ]))
+                Ok(Node {
+                    ident: PathElement::from_ident_str("c"),
+                    index: 5,
+                    size: 16,
+                    offset: 0,
+                    height: 0,
+                    is_list: false,
+                })
             } else {
                 U256::get_node(path[1..].to_vec())
             }
-        } else if p1 == Some(&Path::Ident("d".to_string())) {
+        } else if p1 == Some(&PathElement::from_ident_str("d")) {
             if path.len() == 1 {
-                Ok(Node::Primitive(vec![
-                    Primitive {
-                        ident: "c".to_owned(),
-                        index: 5,
-                        size: 16,
-                        offset: 0,
-                    },
-                    Primitive {
-                        ident: "d".to_owned(),
-                        index: 5,
-                        size: 16,
-                        offset: 16,
-                    },
-                ]))
+                Ok(Node {
+                    ident: PathElement::from_ident_str("d"),
+                    index: 5,
+                    size: 16,
+                    offset: 16,
+                    height: 0,
+                    is_list: false,
+                })
             } else {
                 U256::get_node(path[1..].to_vec())
             }
@@ -122,5 +117,5 @@ fn roundtrip_partial() {
 
     let mut p = Proof::<S>::new(sp.clone());
     assert_eq!(p.fill(), Ok(()));
-    assert_eq!(Ok(sp), p.extract(vec![Path::Ident("a".to_string())]));
+    assert_eq!(Ok(sp), p.extract(vec![PathElement::from_ident_str("a")]));
 }
