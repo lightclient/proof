@@ -1,5 +1,5 @@
 # Proof
-[![Build Status](https://travis-ci.com/c-o-l-o-r/proof.svg?branch=master)](https://travis-ci.com/c-o-l-o-r/proof)
+[![Build Status](https://travis-ci.com/lightclient/proof.svg?branch=master)](https://travis-ci.com/lightclient/proof)
 [![License](https://img.shields.io/badge/license-Apache--2.0-blue)](https://github.com/c-o-l-o-r/proof#license)
 
 `Proof` is library for validating and manipulating [merkle proofs](https://blog.ethereum.org/2015/11/15/merkling-in-ethereum/)
