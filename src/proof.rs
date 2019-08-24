@@ -23,7 +23,7 @@ impl<T: MerkleTreeOverlay> Proof<T> {
             _phantom: PhantomData,
         };
 
-        // This will always return `Ok(())` since the `cache` is starting empty.
+        // This will always return `Ok(())` since the `db` is starting empty.
         ret.load(proof).unwrap();
 
         ret
